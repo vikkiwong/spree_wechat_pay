@@ -63,8 +63,8 @@ module Spree
           mch_id: payment_method.preferences[:partnerId],
           nonce_str: SecureRandom.uuid.tr('-', '')
         }
-
-      res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder))
+      sign = generate_sign(unifiedorder, payment_method.preferences[:appKey])
+      res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
 
       p '-------'*100
       p res
@@ -81,7 +81,7 @@ module Spree
             signType: "MD5"
         }
 
-        options.merge(paySign: generate_sign(options))
+        options.merge(paySign: generate_sign(options, payment_method.preferences[:appKey]))
       else
         Rails.logger.debug("set prepay_id fail: #{res}")
 
@@ -192,16 +192,16 @@ module Spree
 
     private
 
-    def make_payload(params)
-      "<xml>#{params.map { |k, v| "<#{k}>#{v}</#{k}>" }.join}<sign>#{generate_sign(params)}</sign></xml>"
+    def make_payload(params, sign)
+      "<xml>#{params.map { |k, v| "<#{k}>#{v}</#{k}>" }.join}<sign>#{sign}</sign></xml>"
     end
 
-    def generate_sign(params)
+    def generate_sign(params, appKey)
       query = params.sort.map do |key, value|
       "#{key}=#{value}"
       end.join('&')
 
-      Digest::MD5.hexdigest("#{query}&key=#{WxPay.key}").upcase    
+      Digest::MD5.hexdigest("#{query}&key=#{appKey}").upcase    
     end
 
     def invoke_remote(url, payload)
