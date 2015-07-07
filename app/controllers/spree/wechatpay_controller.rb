@@ -65,22 +65,20 @@ module Spree
           nonce_str: SecureRandom.hex
         }.reject{ |k, v| v.blank? }
 
-      p '---unifiedorder---'*20
-      p unifiedorder
+      Rails.logger.debug('---unifiedorder---'*20)
+      Rails.logger.debug(unifiedorder)
 
-      sign1 = generate_sign(unifiedorder, payment_method.preferences[:partnerKey])
-      sign = Digest::MD5.hexdigest(unifiedorder.sort.map{ |k, v| "#{k.to_s}=#{v.to_s}" }.push("key=#{payment_method.preferences[:partnerKey]}").join('&')).upcase
-      p '--key--'
-      p payment_method.preferences[:partnerKey]
-      p '--sign--'
-      p sign
-      p '--sign1--'
-      p sign1
+      sign = generate_sign(unifiedorder, payment_method.preferences[:partnerKey])
+
+      Rails.logger.debug('--key--')
+      Rails.logger.debug(payment_method.preferences[:partnerKey])
+      Rails.logger.debug('--sign--')
+      Rails.logger.debug sign
 
       res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
 
-      p '-------'*100
-      p res
+      Rails.logger.debug '-------'*100
+      Rails.logger.debug res
 
       if res && res['return_code'] == 'SUCCESS' && res['result_msg'] == 'SUCCESS'
         Rails.logger.debug("set prepay_id: #{self.prepay_id}")
@@ -214,10 +212,13 @@ module Spree
       "#{key}=#{value}"
       end.join('&')
 
-      p '--query--'
-      p query
+      Rails.logger.debug '--query--'
+      Rails.logger.debug query
 
-      p Digest::MD5.hexdigest("#{query}&key=#{appKey}").upcase
+      Rails.logger.debug '--query&key--'
+      Rails.logger.debug "#{query}&key=#{appKey}"
+
+      Rails.logger.debug Digest::MD5.hexdigest("#{query}&key=#{appKey}").upcase
 
       Digest::MD5.hexdigest("#{query}&key=#{appKey}").upcase    
     end
