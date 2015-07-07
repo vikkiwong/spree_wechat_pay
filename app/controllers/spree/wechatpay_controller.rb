@@ -1,7 +1,15 @@
+require 'rest_client'
+require 'active_support/core_ext/hash/conversions'
+
 module Spree
   class WechatpayController < StoreController
     #ssl_allowed
     skip_before_filter :verify_authenticity_token
+
+    #OPENID = "oUG4Dwp-V28tHuyMGjG1OBinUdOI"
+    OPENID = 'oQ9HCuCrGzNF4kwyZ1f91HIUOkPk'
+
+    GATEWAY_URL = 'https://api.mch.weixin.qq.com/pay'
 
     def pay_options(order)
       payment_method = Spree::PaymentMethod.find(params[:payment_method_id])
@@ -18,7 +26,8 @@ module Spree
           spbill_create_ip: request.remote_ip,
           # time_start: order.created_at && order.created_at.strftime("%Y%m%d%H%M%S"),
           # time_expire: order.created_at && order.created_at.in(7200).strftime("%Y%m%d%H%M%S"),
-          input_charset: "UTF-8"
+          input_charset: "UTF-8",
+          openid: OPENID
       }.reject{ |k, v| v.blank? }.sort.map{ |o| { o.first => o.last } }.inject({}, &:merge)
       package_options.merge!(sign: Digest::MD5.hexdigest(package_options.sort.map{ |k, v| "#{k.to_s}=#{v.to_s}" }.push("key=#{payment_method.preferences[:partnerKey]}").join('&')).upcase)
       options = {
@@ -34,9 +43,57 @@ module Spree
       options
     end
 
+    # 生成预支付ID，并返回支付options
+    def invoke_unifiedorder(order)
+      payment_method = Spree::PaymentMethod.find(params[:payment_method_id])
+      host = payment_method.preferences[:returnHost].blank? ? request.url.sub(request.fullpath, '') : payment_method.preferences[:returnHost]
+
+      unifiedorder = {
+          bank_type: "WX",
+          body: "#{order.line_items[0].product.name.slice(0,30)}等#{order.line_items.count}件",
+          trade_type: "JSAPI",
+          out_trade_no: order.number,
+          spbill_create_ip: request.remote_ip || '127.0.0.1',
+          total_fee: (order.total*100).to_i,
+          fee_type: 1,
+          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '&payment_method_id=' + params[:payment_method_id].to_s,
+          input_charset: "UTF-8",
+          openid: OPENID,   
+          appid: payment_method.preferences[:appId],
+          mch_id: payment_method.preferences[:partnerId],
+          nonce_str: SecureRandom.uuid.tr('-', '')
+        }
+
+      res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder))
+
+      p '-------'*100
+      p res
+
+      if res && res['return_code'] == 'SUCCESS' && res['result_msg'] == 'SUCCESS'
+        Rails.logger.debug("set prepay_id: #{self.prepay_id}")
+        prepay_id = res['prepay_id']
+
+        options = {
+            appId: payment_method.preferences[:appId],
+            timeStamp: Time.now.to_i.to_s,
+            nonceStr: SecureRandom.hex,
+            package: "prepay_id=#{prepay_id}",
+            signType: "MD5"
+        }
+
+        options.merge(paySign: generate_sign(options))
+      else
+        Rails.logger.debug("set prepay_id fail: #{res}")
+
+        {}
+      end
+    end
+
+
     def checkout
       order = current_order || raise(ActiveRecord::RecordNotFound)
-      render json: pay_options(order)
+
+      render json: invoke_unifiedorder(order)
     end
 
     def checkout_api
@@ -131,6 +188,31 @@ module Spree
 
     def payment_method
       Spree::PaymentMethod.find(params[:payment_method_id])
+    end
+
+    private
+
+    def make_payload(params)
+      "<xml>#{params.map { |k, v| "<#{k}>#{v}</#{k}>" }.join}<sign>#{generate_sign(params)}</sign></xml>"
+    end
+
+    def generate_sign(params)
+      query = params.sort.map do |key, value|
+      "#{key}=#{value}"
+      end.join('&')
+
+      Digest::MD5.hexdigest("#{query}&key=#{WxPay.key}").upcase    
+    end
+
+    def invoke_remote(url, payload)
+      r = RestClient::Request.execute(
+        {
+          method: :post,
+          url: url,
+          payload: payload,
+          headers: { content_type: 'application/xml' }
+        }.merge({timeout: 2, open_timeout: 3})
+      )
     end
   end
 end
