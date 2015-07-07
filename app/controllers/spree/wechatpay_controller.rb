@@ -1,3 +1,4 @@
+# encoding: utf-8
 require 'rest_client'
 require 'active_support/core_ext/hash/conversions'
 
@@ -67,11 +68,14 @@ module Spree
       p '---unifiedorder---'*20
       p unifiedorder
 
-      sign = generate_sign(unifiedorder, payment_method.preferences[:appKey])
+      sign1 = generate_sign(unifiedorder, payment_method.preferences[:partnerKey])
+      sign = Digest::MD5.hexdigest(unifiedorder.sort.map{ |k, v| "#{k.to_s}=#{v.to_s}" }.push("key=#{payment_method.preferences[:partnerKey]}").join('&')).upcase
       p '--key--'
-      p payment_method.preferences[:appKey]
-      p '----'
+      p payment_method.preferences[:partnerKey]
+      p '--sign--'
       p sign
+      p '--sign1--'
+      p sign1
 
       res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
 
@@ -90,7 +94,7 @@ module Spree
             signType: "MD5"
         }
 
-        options.merge(paySign: generate_sign(options, payment_method.preferences[:appKey]))
+        options.merge(paySign: generate_sign(options, payment_method.preferences[:partnerKey]))
       else
         Rails.logger.debug("set prepay_id fail: #{res}")
 
@@ -209,6 +213,11 @@ module Spree
       query = params.sort.map do |key, value|
       "#{key}=#{value}"
       end.join('&')
+
+      p '--query--'
+      p query
+
+      p Digest::MD5.hexdigest("#{query}&key=#{appKey}").upcase
 
       Digest::MD5.hexdigest("#{query}&key=#{appKey}").upcase    
     end
