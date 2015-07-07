@@ -61,9 +61,18 @@ module Spree
           openid: OPENID,   
           appid: payment_method.preferences[:appId],
           mch_id: payment_method.preferences[:partnerId],
-          nonce_str: SecureRandom.uuid.tr('-', '')
-        }
+          nonce_str: SecureRandom.hex
+        }.reject{ |k, v| v.blank? }
+
+      p '---unifiedorder---'*20
+      p unifiedorder
+
       sign = generate_sign(unifiedorder, payment_method.preferences[:appKey])
+      p '--key--'
+      p payment_method.preferences[:appKey]
+      p '----'
+      p sign
+
       res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
 
       p '-------'*100
