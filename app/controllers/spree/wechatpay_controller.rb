@@ -57,7 +57,7 @@ module Spree
           spbill_create_ip: request.remote_ip || '127.0.0.1',
           total_fee: (order.total*100).to_i,
           fee_type: 1,
-          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s, # + '%26payment_method_id=' + params[:payment_method_id].to_s,
+          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '%26payment_method_id=' + params[:payment_method_id].to_s,
           input_charset: "UTF-8",
           openid: OPENID,   
           appid: payment_method.preferences[:appId],
