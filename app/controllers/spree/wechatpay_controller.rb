@@ -84,6 +84,10 @@ module Spree
         }
 
         options.merge(paySign: generate_sign(options, payment_method.preferences[:partnerKey]))
+
+        options[:orderNumber] = order.number
+
+        options
       else
         Rails.logger.debug '---res---'
         Rails.logger.debug("set prepay_id fail: #{res}")
@@ -225,7 +229,7 @@ module Spree
       )
 
       h = Hash.from_xml(r)
-      
+
       Rails.logger.debug '---h[xml]---'
       Rails.logger.debug h['xml']
 
