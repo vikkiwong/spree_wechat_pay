@@ -72,6 +72,7 @@ module Spree
       res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
 
       if res && res['return_code'] == 'SUCCESS'
+
         prepay_id = res['prepay_id']
         Rails.logger.debug("set prepay_id: #{prepay_id}")
         options = {
@@ -224,6 +225,9 @@ module Spree
       )
 
       h = Hash.from_xml(r)
+      
+      Rails.logger.debug '---h[xml]---'
+      Rails.logger.debug h['xml']
 
       h['xml']
     end
