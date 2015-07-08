@@ -231,17 +231,14 @@ module Spree
       )
       Rails.logger.debug '--r--'
       Rails.logger.debug r
-      Rails.logger.debug r['xml']
-      Rails.logger.debug r['xml'].class
 
-      h = {}
-      if r['xml'].class == Hash
-        r['xml'].each_pair { |k, v| h[k] = v }
-      end
+      h = Hash.from_xml(xml)
 
+      Rails.logger.debug '--h--'
       Rails.logger.debug h
+      Rails.logger.debug h['xml']
 
-      h 
+      h['xml']
     end
   end
 end
