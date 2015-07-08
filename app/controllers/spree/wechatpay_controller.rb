@@ -69,19 +69,11 @@ module Spree
 
       sign = generate_sign(unifiedorder, payment_method.preferences[:partnerKey])
 
-      Rails.logger.debug('--key--')
-      Rails.logger.debug(payment_method.preferences[:partnerKey])
-
-
       res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
-      Rails.logger.debug '--return_code & return_msg --'
-      Rails.logger.debug res['return_code']
-      Rails.logger.debug res['return_msg']
 
-      if res && res['return_code'] == 'SUCCESS' && res['return_msg'] == 'OK'
-        Rails.logger.debug("set prepay_id: #{self.prepay_id}")
+      if res && res['return_code'] == 'SUCCESS'
         prepay_id = res['prepay_id']
-
+        Rails.logger.debug("set prepay_id: prepay_id")
         options = {
             appId: payment_method.preferences[:appId],
             timeStamp: Time.now.to_i.to_s,
@@ -229,14 +221,8 @@ module Spree
           headers: { content_type: 'application/xml' }
         }.merge({timeout: 2, open_timeout: 3})
       )
-      Rails.logger.debug '--r--'
-      Rails.logger.debug r
 
-      h = Hash.from_xml(xml)
-
-      Rails.logger.debug '--h--'
-      Rails.logger.debug h
-      Rails.logger.debug h['xml']
+      h = Hash.from_xml(r)
 
       h['xml']
     end
