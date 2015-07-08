@@ -73,7 +73,7 @@ module Spree
 
       if res && res['return_code'] == 'SUCCESS'
         prepay_id = res['prepay_id']
-        Rails.logger.debug("set prepay_id: prepay_id")
+        Rails.logger.debug("set prepay_id: #{prepay_id}")
         options = {
             appId: payment_method.preferences[:appId],
             timeStamp: Time.now.to_i.to_s,
