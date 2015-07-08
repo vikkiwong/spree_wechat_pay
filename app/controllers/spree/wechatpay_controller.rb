@@ -7,21 +7,21 @@ module Spree
     #ssl_allowed
     skip_before_filter :verify_authenticity_token
 
-    before_filter :has_openid?, only: [:checkout, :checkout_api]
+    #before_filter :has_openid?, only: [:checkout, :checkout_api]
 
     #OPENID = "oUG4Dwp-V28tHuyMGjG1OBinUdOI"
-    #OPENID = 'oQ9HCuCrGzNF4kwyZ1f91HIUOkPk'
+    OPENID = 'oQ9HCuCrGzNF4kwyZ1f91HIUOkPk'
 
     GATEWAY_URL = 'https://api.mch.weixin.qq.com/pay'
 
-    def has_openid?
+    # def has_openid?
 
-      redirect_to '/auth/wechat' unless current_order.try(:user_id).present?
+    #   redirect_to '/auth/wechat' unless current_order.try(:user_id).present?
 
-      @wechat_auth ||= Spree::UserAuthenticaton.where(user_id: current_order.user_id, provider: 'wechat').first
+    #   @wechat_auth ||= Spree::UserAuthenticaton.where(user_id: current_order.user_id, provider: 'wechat').first
 
-      redirect_to '/auth/wechat' unless @wechat_auth && @wechat_auth.uid
-    end
+    #   redirect_to '/auth/wechat' unless @wechat_auth && @wechat_auth.uid
+    # end
 
     # def pay_options(order)
     #   payment_method = Spree::PaymentMethod.find(params[:payment_method_id])
@@ -68,9 +68,9 @@ module Spree
           spbill_create_ip: request.remote_ip || '127.0.0.1',
           total_fee: (order.total*100).to_i,
           fee_type: 1,
-          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '%26payment_method_id=' + params[:payment_method_id].to_s,
+          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s, # + '%26payment_method_id=' + params[:payment_method_id].to_s,
           input_charset: "UTF-8",
-          openid: @wechat_auth.uid,   
+          openid: OPENID,   
           appid: payment_method.preferences[:appId],
           mch_id: payment_method.preferences[:partnerId],
           nonce_str: SecureRandom.hex,
