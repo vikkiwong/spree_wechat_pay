@@ -95,7 +95,7 @@ module Spree
             orderNumber: order.number,
         }
 
-        options.merge!({ paySign: generate_sign(options, payment_method.preferences[:partnerKey]))
+        options.merge!( paySign: generate_sign(options, payment_method.preferences[:partnerKey]) )
       else
         Rails.logger.debug '---res---'
         Rails.logger.debug("set prepay_id fail: #{res}")
@@ -220,7 +220,7 @@ module Spree
 
     def generate_sign(params, appKey)
       query = params.sort.map do |key, value|
-      "#{key}=#{value}"
+        "#{key}=#{value}"
       end.join('&')
 
       Rails.logger.debug '--query&key--'
