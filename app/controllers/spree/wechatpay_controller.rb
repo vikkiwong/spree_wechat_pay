@@ -57,7 +57,7 @@ module Spree
           spbill_create_ip: request.remote_ip || '127.0.0.1',
           total_fee: (order.total*100).to_i,
           fee_type: 1,
-          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '&payment_method_id=' + params[:payment_method_id].to_s,
+          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '%26payment_method_id=' + params[:payment_method_id].to_s,
           input_charset: "UTF-8",
           openid: OPENID,   
           appid: payment_method.preferences[:appId],
@@ -65,20 +65,15 @@ module Spree
           nonce_str: SecureRandom.hex
         }.reject{ |k, v| v.blank? }
 
-      Rails.logger.debug('---unifiedorder---'*20)
-      Rails.logger.debug(unifiedorder)
+      Rails.logger.debug('------'*20)
 
       sign = generate_sign(unifiedorder, payment_method.preferences[:partnerKey])
 
       Rails.logger.debug('--key--')
       Rails.logger.debug(payment_method.preferences[:partnerKey])
-      Rails.logger.debug('--sign--')
-      Rails.logger.debug sign
+
 
       res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
-
-      Rails.logger.debug '-------'*100
-      Rails.logger.debug res
 
       if res && res['return_code'] == 'SUCCESS' && res['result_msg'] == 'SUCCESS'
         Rails.logger.debug("set prepay_id: #{self.prepay_id}")
@@ -94,6 +89,7 @@ module Spree
 
         options.merge(paySign: generate_sign(options, payment_method.preferences[:partnerKey]))
       else
+        Rails.logger.debug '---res---'
         Rails.logger.debug("set prepay_id fail: #{res}")
 
         {}
@@ -212,12 +208,10 @@ module Spree
       "#{key}=#{value}"
       end.join('&')
 
-      Rails.logger.debug '--query--'
-      Rails.logger.debug query
-
       Rails.logger.debug '--query&key--'
       Rails.logger.debug "#{query}&key=#{appKey}"
 
+      Rails.logger.debug '--sign--'
       Rails.logger.debug Digest::MD5.hexdigest("#{query}&key=#{appKey}").upcase
 
       Digest::MD5.hexdigest("#{query}&key=#{appKey}").upcase    
