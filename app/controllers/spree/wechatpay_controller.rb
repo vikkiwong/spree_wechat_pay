@@ -14,37 +14,41 @@ module Spree
 
     GATEWAY_URL = 'https://api.mch.weixin.qq.com/pay'
 
-    def pay_options(order)
-      payment_method = Spree::PaymentMethod.find(params[:payment_method_id])
-      host = payment_method.preferences[:returnHost].blank? ? request.url.sub(request.fullpath, '') : payment_method.preferences[:returnHost]
-
-      package_options = {
-          bank_type: "WX",
-          body: "#{order.line_items[0].product.name.slice(0,30)}等#{order.line_items.count}件",
-          partner: payment_method.preferences[:partnerId],
-          out_trade_no: order.number,
-          total_fee: (order.total*100).to_i,
-          fee_type: 1,
-          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '&payment_method_id=' + params[:payment_method_id].to_s,
-          spbill_create_ip: request.remote_ip,
-          # time_start: order.created_at && order.created_at.strftime("%Y%m%d%H%M%S"),
-          # time_expire: order.created_at && order.created_at.in(7200).strftime("%Y%m%d%H%M%S"),
-          input_charset: "UTF-8",
-          openid: OPENID
-      }.reject{ |k, v| v.blank? }.sort.map{ |o| { o.first => o.last } }.inject({}, &:merge)
-      package_options.merge!(sign: Digest::MD5.hexdigest(package_options.sort.map{ |k, v| "#{k.to_s}=#{v.to_s}" }.push("key=#{payment_method.preferences[:partnerKey]}").join('&')).upcase)
-      options = {
-          appId: payment_method.preferences[:appId],
-          timeStamp: Time.now.to_i.to_s,
-          nonceStr: (('A'..'Z').to_a + ('a'..'z').to_a + ('0'..'9').to_a).sample(32).join,
-          package: package_options.map{ |k, v| "#{ERB::Util.u(k.to_s)}=#{ERB::Util.u(v.to_s)}" }.join('&')
-      }
-      options.merge!(signType: 'SHA1', paySign: Digest::SHA1.hexdigest(options.merge(appKey: payment_method.preferences[:appKey]).sort.map{ |k, v| "#{k.to_s.downcase}=#{v.to_s}" }.join('&')))
-
-      options[:orderNumber] = order.number
-
-      options
+    def has_openid?
+      true
     end
+
+    # def pay_options(order)
+    #   payment_method = Spree::PaymentMethod.find(params[:payment_method_id])
+    #   host = payment_method.preferences[:returnHost].blank? ? request.url.sub(request.fullpath, '') : payment_method.preferences[:returnHost]
+
+    #   package_options = {
+    #       bank_type: "WX",
+    #       body: "#{order.line_items[0].product.name.slice(0,30)}等#{order.line_items.count}件",
+    #       partner: payment_method.preferences[:partnerId],
+    #       out_trade_no: order.number,
+    #       total_fee: (order.total*100).to_i,
+    #       fee_type: 1,
+    #       notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '&payment_method_id=' + params[:payment_method_id].to_s,
+    #       spbill_create_ip: request.remote_ip,
+    #       # time_start: order.created_at && order.created_at.strftime("%Y%m%d%H%M%S"),
+    #       # time_expire: order.created_at && order.created_at.in(7200).strftime("%Y%m%d%H%M%S"),
+    #       input_charset: "UTF-8",
+    #       openid: OPENID
+    #   }.reject{ |k, v| v.blank? }.sort.map{ |o| { o.first => o.last } }.inject({}, &:merge)
+    #   package_options.merge!(sign: Digest::MD5.hexdigest(package_options.sort.map{ |k, v| "#{k.to_s}=#{v.to_s}" }.push("key=#{payment_method.preferences[:partnerKey]}").join('&')).upcase)
+    #   options = {
+    #       appId: payment_method.preferences[:appId],
+    #       timeStamp: Time.now.to_i.to_s,
+    #       nonceStr: (('A'..'Z').to_a + ('a'..'z').to_a + ('0'..'9').to_a).sample(32).join,
+    #       package: package_options.map{ |k, v| "#{ERB::Util.u(k.to_s)}=#{ERB::Util.u(v.to_s)}" }.join('&')
+    #   }
+    #   options.merge!(signType: 'SHA1', paySign: Digest::SHA1.hexdigest(options.merge(appKey: payment_method.preferences[:appKey]).sort.map{ |k, v| "#{k.to_s.downcase}=#{v.to_s}" }.join('&')))
+
+    #   options[:orderNumber] = order.number
+
+    #   options
+    # end
 
     # 生成预支付ID，并返回支付options
     def invoke_unifiedorder(order)
@@ -59,12 +63,12 @@ module Spree
           spbill_create_ip: request.remote_ip || '127.0.0.1',
           total_fee: (order.total*100).to_i,
           fee_type: 1,
-          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s, # + '%26payment_method_id=' + params[:payment_method_id].to_s,
+          notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '%26payment_method_id=' + params[:payment_method_id].to_s,
           input_charset: "UTF-8",
           openid: OPENID,   
           appid: payment_method.preferences[:appId],
           mch_id: payment_method.preferences[:partnerId],
-          nonce_str: SecureRandom.hex
+          nonce_str: SecureRandom.hex,
         }.reject{ |k, v| v.blank? }
 
       Rails.logger.debug('------'*20)
@@ -82,7 +86,8 @@ module Spree
             timeStamp: Time.now.to_i.to_s,
             nonceStr: SecureRandom.hex,
             package: "prepay_id=#{prepay_id}",
-            signType: "MD5"
+            signType: "MD5",
+            orderNumber: order.number,
         }
 
         options.merge(paySign: generate_sign(options, payment_method.preferences[:partnerKey]))
