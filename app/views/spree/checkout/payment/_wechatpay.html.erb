@@ -11,7 +11,9 @@
                 dataType: 'JSON',
                 type: 'GET',
                 success: function(response){
+                    alert(response);
                     if(response && response.appId){
+                        alert(1);
                         WeixinJSBridge.invoke('getBrandWCPayRequest', response, function(res){
                             if(res.err_msg == "get_brand_wcpay_request:ok" ) {
                                 window.location.href = '/orders/'+ response.orderNumber;
@@ -22,6 +24,9 @@
                     }
                 },
                 error: function(err){
+                    alert('失败了');
+                    alert(error);
+                    alert(error.message);
                     console.log(err);
                 }
             });
