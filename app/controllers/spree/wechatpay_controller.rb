@@ -7,6 +7,8 @@ module Spree
     #ssl_allowed
     skip_before_filter :verify_authenticity_token
 
+    before_filter :has_openid?
+
     #OPENID = "oUG4Dwp-V28tHuyMGjG1OBinUdOI"
     OPENID = 'oQ9HCuCrGzNF4kwyZ1f91HIUOkPk'
 
@@ -80,8 +82,7 @@ module Spree
             timeStamp: Time.now.to_i.to_s,
             nonceStr: SecureRandom.hex,
             package: "prepay_id=#{prepay_id}",
-            signType: "MD5",
-            orderNumber: order.number
+            signType: "MD5"
         }
 
         options.merge(paySign: generate_sign(options, payment_method.preferences[:partnerKey]))
