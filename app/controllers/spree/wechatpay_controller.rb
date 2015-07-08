@@ -74,8 +74,11 @@ module Spree
 
 
       res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
+      Rails.logger.debug '--return_code & return_msg --'
+      Rails.logger.debug res['return_code']
+      Rails.logger.debug res['return_msg']
 
-      if res && res['return_code'] == 'SUCCESS' && res['result_msg'] == 'SUCCESS'
+      if res && res['return_code'] == 'SUCCESS' && res['return_msg'] == 'OK'
         Rails.logger.debug("set prepay_id: #{self.prepay_id}")
         prepay_id = res['prepay_id']
 
@@ -226,6 +229,19 @@ module Spree
           headers: { content_type: 'application/xml' }
         }.merge({timeout: 2, open_timeout: 3})
       )
+      Rails.logger.debug '--r--'
+      Rails.logger.debug r
+      Rails.logger.debug r['xml']
+      Rails.logger.debug r['xml'].class
+
+      h = {}
+      if r['xml'].class == Hash
+        r['xml'].each_pair { |k, v| h[k] = v }
+      end
+
+      Rails.logger.debug h
+
+      h 
     end
   end
 end
