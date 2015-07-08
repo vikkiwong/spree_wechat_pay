@@ -86,6 +86,9 @@ module Spree
         options.merge(paySign: generate_sign(options, payment_method.preferences[:partnerKey]))
 
         options[:orderNumber] = order.number
+        
+        Rails.logger.debug("---options---")
+        Rails.logger.debug options
 
         options
       else
@@ -104,12 +107,18 @@ module Spree
     end
 
     def checkout_api
-      order = Spree::Order.find(params[:id]) || raise(ActiveRecord::RecordNotFound)
-      render json: pay_options(order)
+      # "id"=>"2295&payment_method_id=2"
+      id = params[:id].split('&').first if params[:id].present?
+
+      order = Spree::Order.find(id) || raise(ActiveRecord::RecordNotFound)
+      render json: invoke_unifiedorder(order)
     end
 
     def notify
-      order = Spree::Order.find(params[:id]) || raise(ActiveRecord::RecordNotFound)
+      # "id"=>"2295&payment_method_id=2"
+      id = params[:id].split('&').first if params[:id].present?
+
+      order = Spree::Order.find(id) || raise(ActiveRecord::RecordNotFound)
       payment_notify_data = params.slice(:sign_type, :service_version, :input_charset, :sign, :sign_key_index, :trade_mode, :trade_state, :pay_info, :partner, :bank_type, :bank_billno, :total_fee, :fee_type, :notify_id, :transaction_id, :out_trade_no, :attach, :time_end, :transport_fee, :product_fee, :discount, :buyer_alias, :xml)
 
       unless payment_notify_data[:trade_state].to_s == '0' && payment_notify_data[:total_fee].to_s == ((order.total*100).to_i).to_s && payment_notify_data.try(:[], :xml).try(:[], :OpenId).present? && Digest::MD5.hexdigest(payment_notify_data.except(:xml, :sign).reject{ |k,v| v.blank? }.sort.map{ |k, v| "#{k.to_s}=#{v.to_s}" }.push("key=#{payment_method.preferences[:partnerKey]}").join('&')).upcase == payment_notify_data[:sign].to_s
