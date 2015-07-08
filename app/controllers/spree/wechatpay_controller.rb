@@ -3,21 +3,20 @@ module Spree
     #ssl_allowed
     skip_before_filter :verify_authenticity_token
 
-    #before_filter :has_openid?, only: [:checkout, :checkout_api]
+    before_filter :has_openid?, only: :checkout
 
     #OPENID = "oUG4Dwp-V28tHuyMGjG1OBinUdOI"
     OPENID = 'oQ9HCuCrGzNF4kwyZ1f91HIUOkPk'
 
     GATEWAY_URL = 'https://api.mch.weixin.qq.com/pay'
 
-    # def has_openid?
+    def has_openid?
+      redirect_to '/auth/wechat' unless current_order.try(:user_id).present?
 
-    #   redirect_to '/auth/wechat' unless current_order.try(:user_id).present?
+      @wechat_auth ||= Spree::UserAuthenticaton.where(user_id: current_order.user_id, provider: 'wechat').first
 
-    #   @wechat_auth ||= Spree::UserAuthenticaton.where(user_id: current_order.user_id, provider: 'wechat').first
-
-    #   redirect_to '/auth/wechat' unless @wechat_auth && @wechat_auth.uid
-    # end
+      redirect_to '/auth/wechat' unless @wechat_auth && @wechat_auth.uid
+    end
 
     # 生成预支付ID，并返回支付options
     def invoke_unifiedorder(order)
