@@ -139,7 +139,8 @@ module Spree
     end
 
     def query
-      order = Spree::Order.find(params[:id]) || raise(ActiveRecord::RecordNotFound)
+      id = params[:id].split('&').first if params[:id].present?
+      order = Spree::Order.find(id) || raise(ActiveRecord::RecordNotFound)
       payment_method = Spree::PaymentMethod.find(params[:payment_method_id])
 
       if order.complete?
