@@ -80,13 +80,12 @@ module Spree
             timeStamp: Time.now.to_i.to_s,
             nonceStr: SecureRandom.hex,
             package: "prepay_id=#{prepay_id}",
-            signType: "MD5"
+            signType: "MD5",
+            orderNumber: order.number
         }
 
         options.merge(paySign: generate_sign(options, payment_method.preferences[:partnerKey]))
 
-        options[:orderNumber] = order.number
-        
         Rails.logger.debug("---options---")
         Rails.logger.debug options
 
