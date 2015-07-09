@@ -10,12 +10,14 @@ module Spree
 
     GATEWAY_URL = 'https://api.mch.weixin.qq.com/pay'
 
+    # errCode
+    # 1001：用户未授权，缺少openId
     def has_openid?
-      redirect_to '/auth/wechat' unless current_order.try(:user_id).present?
+      render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} unless current_order.try(:user_id).present?
 
-      @wechat_auth ||= Spree::UserAuthenticaton.where(user_id: current_order.user_id, provider: 'wechat').first
+      @wechat_auth ||= Spree::UserAuthentication.where(user_id: current_order.user_id, provider: 'wechat').first
 
-      redirect_to '/auth/wechat' unless @wechat_auth && @wechat_auth.uid
+      render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} unless @wechat_auth && @wechat_auth.uid
     end
 
     # 生成预支付ID，并返回支付options
@@ -82,20 +84,17 @@ module Spree
     def notify
       res = params[:xml]
 
-      id,  payment_params = res[:id].split('&') if res[:id].present?
-      payment_method_id = payment_params.split('=')[1] if payment_params.present?
-
-      order = Spree::Order.find(id) || raise(ActiveRecord::RecordNotFound)
-      payment_method = Spree::PaymentMethod.find(payment_method_id) || raise(ActiveRecord::RecordNotFound)
+      order = Spree::Order.find(res[:id]) || raise(ActiveRecord::RecordNotFound)
+      payment_method = Spree::PaymentMethod.find(res[:payment_method_id]) || raise(ActiveRecord::RecordNotFound)
 
       # 验证结果
       unless res[:result_code] == "SUCCESS" && res[:total_fee].to_s == ((order.total*100).to_i).to_s && res[:openid].present?
-        render text: "failure", layout: false
+        render json: "failure", layout: false
         return
       end
 
       if order.complete?
-        render text: "success", layout: false
+        render json: "success", layout: false
         return
       end
 
@@ -114,9 +113,9 @@ module Spree
       order.next
 
       if order.complete?
-        render text: "success", layout: false
+        render json: "success", layout: false
       else
-        render text: "failure", layout: false
+        render json: "failure", layout: false
       end
     end
 
@@ -167,9 +166,13 @@ module Spree
       "<xml>#{params.map { |k, v| "<#{k}>#{v}</#{k}>" }.join}<sign>#{sign}</sign></xml>"
     end
 
+    def html_escape(str)
+      str.gsub(/&/, '&amp;').gsub(/"/, '&quot;').gsub(/'/, '&#39;').gsub(/</, '&lt;').gsub(/>/, '&gt;')
+    end
+
     def generate_sign(params, appKey)
       query = params.sort.map do |key, value|
-        "#{key}=#{value}"
+        "#{key}=#{html_escape value}"
       end.join('&')
 
       Rails.logger.debug '--query&key--'
