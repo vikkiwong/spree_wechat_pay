@@ -88,8 +88,11 @@ module Spree
     def notify
       res = params[:xml]
 
-      order = Spree::Order.find(res[:id]) || raise(ActiveRecord::RecordNotFound)
-      payment_method = Spree::PaymentMethod.find(res[:payment_method_id]) || raise(ActiveRecord::RecordNotFound)
+      order_id, payment_params = res[:id].split("&") if res[:id].present?
+      payment_method_id = payment_params.split('=')[1] if payment_params.present?
+
+      order = Spree::Order.find(order_id) || raise(ActiveRecord::RecordNotFound)
+      payment_method = Spree::PaymentMethod.find(payment_method_id) || raise(ActiveRecord::RecordNotFound)
 
       # 验证结果
       unless res[:result_code] == "SUCCESS" && res[:total_fee].to_s == ((order.total*100).to_i).to_s && res[:openid].present?

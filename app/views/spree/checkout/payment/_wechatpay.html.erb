@@ -3,7 +3,8 @@
     var id = "<%= payment_method.id %>";
     var dom = "#wechatPay" + id;
     var host = "<%= payment_method.preferences[:returnHost].blank? ? '' : payment_method.preferences[:returnHost] %>"
-    
+    var orderNumber = "<%= current_order.number %>"
+    alert(orderNumber)
     // 当微信内置浏览器完成内部初始化后会触发WeixinJSBridgeReady事件。
     document.addEventListener('WeixinJSBridgeReady', function onBridgeReady() {
         //公众号支付
