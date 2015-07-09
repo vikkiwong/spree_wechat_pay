@@ -6,18 +6,22 @@ module Spree
     before_filter :has_openid?, only: :checkout
 
     #OPENID = "oUG4Dwp-V28tHuyMGjG1OBinUdOI"
-    OPENID = 'oQ9HCuCrGzNF4kwyZ1f91HIUOkPk'
+    # OPENID = 'oQ9HCuCrGzNF4kwyZ1f91HIUOkPk'
 
     GATEWAY_URL = 'https://api.mch.weixin.qq.com/pay'
 
     # errCode
     # 1001：用户未授权，缺少openId
     def has_openid?
-      render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} unless current_order.try(:user_id).present?
+      unless current_order.try(:user_id).present?
+        render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} and return
+      end
 
       @wechat_auth ||= Spree::UserAuthentication.where(user_id: current_order.user_id, provider: 'wechat').first
 
-      render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} unless @wechat_auth && @wechat_auth.uid
+      unless @wechat_auth && @wechat_auth.uid
+        render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} and return
+      end
     end
 
     # 生成预支付ID，并返回支付options
@@ -35,7 +39,7 @@ module Spree
           fee_type: 1,
           notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '%26payment_method_id=' + params[:payment_method_id].to_s,
           input_charset: "UTF-8",
-          openid: OPENID,   
+          openid: @wechat_auth.uid,
           appid: payment_method.preferences[:appId],
           mch_id: payment_method.preferences[:partnerId],
           nonce_str: SecureRandom.hex,
@@ -172,7 +176,7 @@ module Spree
 
     def generate_sign(params, appKey)
       query = params.sort.map do |key, value|
-        "#{key}=#{html_escape value}"
+        "#{key}=#{html_escape value.to_s}"
       end.join('&')
 
       Rails.logger.debug '--query&key--'

@@ -2,6 +2,8 @@
 <script>
     var id = "<%= payment_method.id %>";
     var dom = "#wechatPay" + id;
+    var host = "<%= payment_method.preferences[:returnHost].blank? ? '' : payment_method.preferences[:returnHost] %>"
+    
     // 当微信内置浏览器完成内部初始化后会触发WeixinJSBridgeReady事件。
     document.addEventListener('WeixinJSBridgeReady', function onBridgeReady() {
         //公众号支付
@@ -11,17 +13,17 @@
                 dataType: 'JSON',
                 type: 'GET',
                 success: function(response){
-                    alert(response);
-                    if ( response && response.errCode == 1001 ){
+                    
+                    if ( response && String(response['errCode']) == '1001' ){
                         // 用户未授权
-                        window.location.href = '/auth/wechat';
+                        window.location.href = host + '/auth/wechat';
                     }else if(response && response.appId){
-                        alert(1);
+                        // 调起支付
                         WeixinJSBridge.invoke('getBrandWCPayRequest', response, function(res){
                             if(res.err_msg == "get_brand_wcpay_request:ok" ) {
                                 window.location.href = '/orders/'+ response.orderNumber;
                             }else{
-                                alert(res.err_msg);
+                                console.log('支付失败');
                             }
                             //使用以上方式判断前端返回,微信团队郑重提示：res.err_msg将在用户支付成功后返回ok，但并不保证它绝对可靠。
                             //因此微信团队建议，当收到ok返回时，向商户后台询问是否收到交易成功的通知，若收到通知，前端展示交易成功的界面；若此时未收到通知，商户后台主动调用查询订单接口，查询订单的当前状态，并反馈给前端展示相应的界面。
@@ -29,9 +31,7 @@
                     }
                 },
                 error: function(err){
-                    alert('失败了');
-                    alert(error);
-                    alert(error.message);
+                    console.log('请求失败');
                     console.log(err);
                 }
             });
