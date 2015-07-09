@@ -61,7 +61,7 @@ module Spree
             nonceStr: SecureRandom.hex,
             package: "prepay_id=#{prepay_id}",
             signType: "MD5",
-            orderNumber: order.number,
+            #orderNumber: order.number,
         }
 
         options.merge!( paySign: generate_sign(options, payment_method.preferences[:partnerKey]) )

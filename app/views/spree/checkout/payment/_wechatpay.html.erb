@@ -3,8 +3,8 @@
     var id = "<%= payment_method.id %>";
     var dom = "#wechatPay" + id;
     var host = "<%= payment_method.preferences[:returnHost].blank? ? '' : payment_method.preferences[:returnHost] %>"
-    var orderNumber = "<%= current_order.number %>"
-    alert(orderNumber)
+    var orderNumber = "<%= @order.number %>"
+
     // 当微信内置浏览器完成内部初始化后会触发WeixinJSBridgeReady事件。
     document.addEventListener('WeixinJSBridgeReady', function onBridgeReady() {
         //公众号支付
@@ -20,9 +20,17 @@
                         window.location.href = host + '/auth/wechat';
                     }else if(response && response.appId){
                         // 调起支付
-                        WeixinJSBridge.invoke('getBrandWCPayRequest', response, function(res){
+                        WeixinJSBridge.invoke('getBrandWCPayRequest', {
+                           'appId': response['appId'],
+                           'timeStamp': response['timeStamp'],
+                           'nonceStr': response['nonceStr'],
+                           'package': response['package'],
+                           'signType': response['signType'],
+                           'paySign': response['paySign'],
+                           //'orderNumber': response['orderNumber'],
+                        }, function(res){
                             if(res.err_msg == "get_brand_wcpay_request:ok" ) {
-                                window.location.href = '/orders/'+ response.orderNumber;
+                                window.location.href = '/orders/'+ orderNumber;
                             }else{
                                 console.log('支付失败');
                             }
