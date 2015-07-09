@@ -17,7 +17,7 @@ module Spree
         render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} and return
       end
 
-      @wechat_auth ||= Spree::UserAuthentication.where(user_id: current_order.user_id, provider: 'wechat').first
+      @wechat_auth ||= Spree::UserAuthentication.where(user_id: current_order.user_id, provider: 'wechat').last
 
       unless @wechat_auth && @wechat_auth.uid
         render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} and return
