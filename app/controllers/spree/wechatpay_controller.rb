@@ -3,26 +3,8 @@ module Spree
     #ssl_allowed
     skip_before_filter :verify_authenticity_token
 
-    before_filter :has_openid?, only: :checkout
-
-    #OPENID = "oUG4Dwp-V28tHuyMGjG1OBinUdOI"
-    # OPENID = 'oQ9HCuCrGzNF4kwyZ1f91HIUOkPk'
-
     GATEWAY_URL = 'https://api.mch.weixin.qq.com/pay'
 
-    # errCode
-    # 1001：用户未授权，缺少openId
-    def has_openid?
-      unless current_order.try(:user_id).present?
-        render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} and return
-      end
-
-      @wechat_auth ||= Spree::UserAuthentication.where(user_id: current_order.user_id, provider: 'wechat').last
-
-      unless @wechat_auth && @wechat_auth.uid
-        render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} and return
-      end
-    end
 
     # 生成预支付ID，并返回支付options
     def invoke_unifiedorder(order)
@@ -82,6 +64,18 @@ module Spree
 
       order ||= raise(ActiveRecord::RecordNotFound)
 
+      # 订单用户存在
+      unless order.try(:user_id).present?
+        render json: { 'errCode' => 1001, 'msg' => '找不到订单用户'} and return
+      end
+
+      @wechat_auth ||= Spree::UserAuthentication.where(user_id: order.user_id, provider: 'wechat').last
+
+      # 且有授权
+      unless @wechat_auth && @wechat_auth.uid
+        render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} and return
+      end
+
       render json: invoke_unifiedorder(order)
     end
 
@@ -127,7 +121,7 @@ module Spree
     end
 
     def query
-      order = Spree::Order.find(id) || raise(ActiveRecord::RecordNotFound)
+      order = Spree::Order.find(params[:id]) || raise(ActiveRecord::RecordNotFound)
       payment_method = Spree::PaymentMethod.find(params[:payment_method_id])
 
       if order.complete?
