@@ -71,7 +71,7 @@ module Spree
                   wechat_auth = Spree::UserAuthentication.where(user_id: order.user_id, provider: 'wechat').last
                   wechat_auth.try(:uid)
                 end
-                
+
       render json: { errCode: 1001, msg: "用户未授权" } and return unless @openid.present?
 
       render json: invoke_unifiedorder(order)
@@ -135,7 +135,8 @@ module Spree
 
       sign = generate_sign(options, payment_method.preferences[:partnerKey])
 
-      res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(options, sign))
+      #res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(options, sign))
+      res = invoke_remote("#{GATEWAY_URL}/orderquery", make_payload(options, sign))
 
       if res && res['return_code'] == 'SUCCESS' && res['result_code'] == 'SUCCESS' && res['trade_state'] == 'SUCCESS'
 
