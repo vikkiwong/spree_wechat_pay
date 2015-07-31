@@ -21,7 +21,7 @@ module Spree
           fee_type: 1,
           notify_url: host + '/wechatpay/notify?id=' + order.id.to_s + '%26payment_method_id=' + params[:payment_method_id].to_s,
           input_charset: "UTF-8",
-          openid: @wechat_auth.uid,
+          openid: @openid,
           appid: payment_method.preferences[:appId],
           mch_id: payment_method.preferences[:partnerId],
           nonce_str: SecureRandom.hex,
@@ -64,17 +64,15 @@ module Spree
 
       order ||= raise(ActiveRecord::RecordNotFound)
 
-      # 订单用户存在
-      unless order.try(:user_id).present?
-        render json: { 'errCode' => 1001, 'msg' => '找不到订单用户'} and return
-      end
+      @openid = if params[:openid].present?  # 有openid 参数
+                  params[:openid]
 
-      @wechat_auth ||= Spree::UserAuthentication.where(user_id: order.user_id, provider: 'wechat').last
-
-      # 且有授权
-      unless @wechat_auth && @wechat_auth.uid
-        render json: { 'errCode' => 1001, 'msg' => '用户未授权，缺少openid'} and return
-      end
+                elsif order.try(:user_id).present?  # 或者订单用户有授权记录
+                  wechat_auth = Spree::UserAuthentication.where(user_id: order.user_id, provider: 'wechat').last
+                  wechat_auth.try(:uid)
+                end
+                
+      render json: { errCode: 1001, msg: "用户未授权" } and return unless @openid.present?
 
       render json: invoke_unifiedorder(order)
     end
