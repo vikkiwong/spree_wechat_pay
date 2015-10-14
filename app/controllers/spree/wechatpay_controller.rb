@@ -33,7 +33,7 @@ module Spree
 
       res = invoke_remote("#{GATEWAY_URL}/unifiedorder", make_payload(unifiedorder, sign))
 
-      if res && res['return_code'] == 'SUCCESS'
+      if res && res['return_code'] == 'SUCCESS' && res['result_code'] == 'SUCCESS'
 
         prepay_id = res['prepay_id']
         Rails.logger.debug("set prepay_id: #{prepay_id}")
